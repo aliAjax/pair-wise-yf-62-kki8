@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev -H 0.0.0.0 -p 62027",
     "build": "next build",
-    "start": "next start -H 0.0.0.0 -p 62027"
+    "start": "next start -H 0.0.0.0 -p 62027",
+    "verify:sync": "tsx scripts/verify-sync.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -26,6 +27,7 @@
     "@types/node": "^22.18.1",
     "@types/react": "^19.1.10",
     "@types/react-dom": "^19.1.7",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.3"
   }
 }
