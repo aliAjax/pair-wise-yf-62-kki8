@@ -2,9 +2,10 @@
 
 import { useEffect, useRef } from 'react';
 import type { Map as MapLibreMap, Marker } from 'maplibre-gl';
-import type { RescueAsset, SearchArea } from '@/lib/types';
+import type { PositionReport, RescueAsset, SearchArea } from '@/lib/types';
+import { isPositionExpired } from '@/lib/coverage';
 
-export function SearchMap({ areas, assets }: { areas: SearchArea[]; assets: RescueAsset[] }) {
+export function SearchMap({ areas, assets, trail }: { areas: SearchArea[]; assets: RescueAsset[]; trail: PositionReport[] }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markersRef = useRef<Marker[]>([]);
@@ -22,10 +23,20 @@ export function SearchMap({ areas, assets }: { areas: SearchArea[]; assets: Resc
           map.fitBounds(new LngLatBounds([area.bounds[0], area.bounds[1]], [area.bounds[2], area.bounds[3]]), { padding: 60 });
         });
         markersRef.current = assets.map((asset) => new MapMarker({ color: asset.status === 'offline' ? '#dc2626' : '#0f766e' }).setLngLat([asset.lng, asset.lat]).addTo(map));
+
+        // 位置轨迹：新鲜点青色，过期点灰色只留档
+        const features = trail.map((point) => ({
+          type: 'Feature' as const,
+          properties: { archived: isPositionExpired(point.time) || point.archived },
+          geometry: { type: 'Point' as const, coordinates: [point.lng, point.lat] }
+        }));
+        map.addSource('trail', { type: 'geojson', data: { type: 'FeatureCollection', features } });
+        map.addLayer({ id: 'trail-archived', type: 'circle', source: 'trail', filter: ['==', ['get', 'archived'], true], paint: { 'circle-radius': 3, 'circle-color': '#9ca3af', 'circle-opacity': .7 } });
+        map.addLayer({ id: 'trail-fresh', type: 'circle', source: 'trail', filter: ['!=', ['get', 'archived'], true], paint: { 'circle-radius': 4, 'circle-color': '#0d9488', 'circle-stroke-width': 1, 'circle-stroke-color': '#ffffff' } });
       });
     });
     return () => { disposed = true; markersRef.current.forEach((marker) => marker.remove()); mapRef.current?.remove(); };
-  }, [areas, assets]);
+  }, [areas, assets, trail]);
 
   return <div ref={containerRef} className="map-shell" aria-label="搜救海域地图" />;
 }
